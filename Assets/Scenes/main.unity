@@ -194,6 +194,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   midi: {fileID: 200531120}
   audio: {fileID: 200531122}
+  visualizer: {fileID: 349751277}
 --- !u!1 &349751277
 GameObject:
   m_ObjectHideFlags: 0
@@ -444,7 +445,9 @@ MonoBehaviour:
   breakBeforeColorGrading: 0
   m_BeforeTransparentBundles: []
   m_BeforeStackBundles: []
-  m_AfterStackBundles: []
+  m_AfterStackBundles:
+  - assemblyQualifiedName: TrackRenderSettings, Assembly-CSharp, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
 --- !u!1 &1371798837
 GameObject:
   m_ObjectHideFlags: 0

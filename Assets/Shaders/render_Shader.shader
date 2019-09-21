@@ -1,0 +1,40 @@
+﻿Shader "Hidden/GigR/Render"
+{
+    HLSLINCLUDE
+
+        #include "Packages/com.unity.postprocessing/PostProcessing/Shaders/StdLib.hlsl"
+
+        TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
+        TEXTURE2D_SAMPLER2D(_TrackTex, sampler_TrackTex);
+        int _showTrack;
+
+        float4 Frag(VaryingsDefault i) : SV_Target
+        {
+            float4 color;
+            if(_showTrack == 1) {
+                color = SAMPLE_TEXTURE2D(_TrackTex, sampler_TrackTex, i.texcoord);
+            } else {
+                color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.texcoord);
+            }
+            // float luminance = dot(color.rgb, float3(0.2126729, 0.7151522, 0.0721750));
+            // color.rgb = lerp(color.rgb, luminance.xxx, _Blend.xxx);
+            return color;
+        }
+
+    ENDHLSL
+
+    SubShader
+    {
+        Cull Off ZWrite Off ZTest Always
+
+        Pass
+        {
+            HLSLPROGRAM
+
+                #pragma vertex VertDefault
+                #pragma fragment Frag
+
+            ENDHLSL
+        }
+    }
+}
