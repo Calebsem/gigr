@@ -9,18 +9,18 @@ public class VisualizerController : MonoBehaviour {
   private Transform[] Children;
 
   void Start () {
-    Children = new Transform[MidiController.sampleCount];
-    for (int x = 0; x < MidiController.visualizerLineCount; x++) {
-      for (int y = 0; y < MidiController.visualizerLineCount; y++) {
+    Children = new Transform[AudioController.sampleCount];
+    for (int x = 0; x < AudioController.visualizerLineCount; x++) {
+      for (int y = 0; y < AudioController.visualizerLineCount; y++) {
         var bar = GameObject.CreatePrimitive (PrimitiveType.Cube);
         bar.GetComponent<MeshRenderer> ().material = BarMaterial;
         bar.transform.SetParent (transform);
         bar.transform.localPosition = new Vector3 (
-          x - MidiController.visualizerLineCount / 2f + .5f,
+          x - AudioController.visualizerLineCount / 2f + .5f,
           0,
-          y - MidiController.visualizerLineCount / 2f + .5f
+          y - AudioController.visualizerLineCount / 2f + .5f
         );
-        Children[x * MidiController.visualizerLineCount + y] = bar.transform;
+        Children[x * AudioController.visualizerLineCount + y] = bar.transform;
       }
     }
   }
@@ -40,7 +40,7 @@ public class VisualizerController : MonoBehaviour {
   }
 
   public void SetFFTData (float[] fftData) {
-    for (int i = 0; i < MidiController.sampleCount; i++) {
+    for (int i = 0; i < AudioController.sampleCount; i++) {
       var amplitude = fftData[i];
       var scale = amplitude / MidiController.fftCeiling;
       var child = Children[i];

@@ -8,10 +8,6 @@ using UnityEngine;
 // using official Novation Launchpad MK2 refs for messages
 // https://d2xhy469pqj8rc.cloudfront.net/sites/default/files/novation/downloads/10529/launchpad-mk2-programmers-reference-guide-v1-02.pdf
 public class MidiController : MonoBehaviour {
-  MidiIn controllerIn;
-  MidiOut controllerOut;
-  RealTimePlayback playback;
-
   public const int UP = 43;
   public const int DOWN = 23;
   public const int LEFT = 32;
@@ -20,22 +16,15 @@ public class MidiController : MonoBehaviour {
   public const int B = 37;
   public const int C = 46;
   public const int D = 47;
-  public const int sampleCount = 64;
-  public const int visualizerLineCount = 8;
   public const int launchpadColumnCount = 8;
   public const int cellCount = 4;
   public const int cellOffset = 40;
   public const float fftCeiling = float.MaxValue / 4f;
 
-  public Transform cube;
-  public VisualizerController visualizer;
-  public Vector2 translation;
-
-  private float[] fftData;
-  private Vector3 originalPos;
+  MidiIn controllerIn;
+  MidiOut controllerOut;
 
   void Start () {
-    originalPos = Camera.main.transform.localPosition;
     for (int device = 0; device < MidiIn.NumberOfDevices; device++) {
       if (MidiIn.DeviceInfo (device).ProductName.Contains ("Launchpad")) {
         controllerIn = new MidiIn (device);
@@ -52,44 +41,7 @@ public class MidiController : MonoBehaviour {
         break;
       }
     }
-    playback = new RealTimePlayback (sampleCount);
-    fftData = new float[sampleCount];
-    playback.Start ();
     StartCoroutine (LaunchpadUpdate ());
-  }
-
-  private void Update () {
-    // test stuff, plox ignore
-    if (cube && translation.sqrMagnitude > 0) {
-      var move = Camera.main.transform.forward * translation.x + Camera.main.transform.right * translation.y;
-      move.Normalize ();
-      cube.Translate (move);
-      if (translation.x > 0)
-        translation.x -= Time.deltaTime * 2;
-      else
-        translation.x += Time.deltaTime * 2;
-      if (translation.y > 0)
-        translation.y -= Time.deltaTime * 2;
-      else
-        translation.y += Time.deltaTime * 2;
-      if (Mathf.Abs (translation.x) < 0.25f) {
-        translation.x = 0;
-      }
-      if (Mathf.Abs (translation.y) < 0.25f) {
-        translation.y = 0;
-      }
-    }
-  }
-
-  private void LateUpdate () {
-    var avgAmplitude = 0f;
-    try {
-      avgAmplitude = fftData.Where (value => !float.IsNaN (value)).Average () / fftCeiling;
-    } catch (Exception e) {
-      Debug.LogException (e);
-    }
-    if (!float.IsNaN (avgAmplitude) && !float.IsInfinity (avgAmplitude))
-      Camera.main.transform.localPosition = originalPos + UnityEngine.Random.insideUnitSphere * avgAmplitude;
   }
 
   private void OnDestroy () {
@@ -100,37 +52,12 @@ public class MidiController : MonoBehaviour {
     controllerIn.Stop ();
     controllerIn.Dispose ();
     controllerOut.Dispose ();
-    playback.Stop ();
-    playback.Dispose ();
   }
 
   private IEnumerator LaunchpadUpdate () {
     for (;;) {
-      DrawFFT ();
       DrawControls ();
       yield return new WaitForSecondsRealtime (0.25f);
-    }
-  }
-
-  private void DrawFFT () {
-    if (playback.GetFFTData (fftData)) {
-      visualizer.SetFFTData (fftData);
-      for (int i = 0; i < sampleCount; i++) {
-        var amplitude = fftData[i];
-        if (i % launchpadColumnCount == 0) {
-          var launchpadIndex = i / launchpadColumnCount;
-          if (amplitude > 1) {
-            for (int cell = 1; cell <= cellCount; cell++) {
-              if (amplitude / (cell * (fftCeiling / cellCount)) >= 1)
-                SendMessage (cellOffset + 10 * cell + 1 + launchpadIndex, 72 + launchpadIndex, 1, true);
-            }
-          } else {
-            for (int cell = 1; cell <= cellCount; cell++) {
-              SendMessage (cellOffset + 10 * cell + 1 + launchpadIndex, 0, 1, true);
-            }
-          }
-        }
-      }
     }
   }
 
@@ -143,6 +70,25 @@ public class MidiController : MonoBehaviour {
     SendMessage (B, 16);
     SendMessage (C, 24);
     SendMessage (D, 32);
+  }
+
+  public void DrawFFT (float[] fftData) {
+    for (int i = 0; i < AudioController.sampleCount; i++) {
+      var amplitude = fftData[i];
+      if (i % launchpadColumnCount == 0) {
+        var launchpadIndex = i / launchpadColumnCount;
+        if (amplitude > 1) {
+          for (int cell = 1; cell <= cellCount; cell++) {
+            if (amplitude / (cell * (fftCeiling / cellCount)) >= 1)
+              SendMessage (cellOffset + 10 * cell + 1 + launchpadIndex, 72 + launchpadIndex, 1, true);
+          }
+        } else {
+          for (int cell = 1; cell <= cellCount; cell++) {
+            SendMessage (cellOffset + 10 * cell + 1 + launchpadIndex, 0, 1, true);
+          }
+        }
+      }
+    }
   }
 
   private bool IsControl (int note) {
@@ -165,16 +111,12 @@ public class MidiController : MonoBehaviour {
     if (noteOn != null) {
       switch (noteOn.NoteNumber) {
         case UP:
-          translation.x = 1;
           break;
         case DOWN:
-          translation.x = -1;
           break;
         case LEFT:
-          translation.y = -1;
           break;
         case RIGHT:
-          translation.y = 1;
           break;
       }
     }
