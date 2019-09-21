@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NAudio.Midi;
 using UnityEngine;
 
@@ -19,18 +20,22 @@ public class MidiController : MonoBehaviour {
   public const int B = 37;
   public const int C = 46;
   public const int D = 47;
+  public const int sampleCount = 64;
+  public const int visualizerLineCount = 8;
+  public const int launchpadColumnCount = 8;
+  public const int cellCount = 4;
+  public const int cellOffset = 40;
+  public const float fftCeiling = float.MaxValue / 4f;
 
   public Transform cube;
-
+  public VisualizerController visualizer;
   public Vector2 translation;
 
   private float[] fftData;
-  private int sampleCount = 8;
-  private int cellCount = 4;
-  private int cellOffset = 40;
-  private float fftCeiling = float.MaxValue / 4f;
+  private Vector3 originalPos;
 
   void Start () {
+    originalPos = Camera.main.transform.localPosition;
     for (int device = 0; device < MidiIn.NumberOfDevices; device++) {
       if (MidiIn.DeviceInfo (device).ProductName.Contains ("Launchpad")) {
         controllerIn = new MidiIn (device);
@@ -77,6 +82,12 @@ public class MidiController : MonoBehaviour {
     DrawControls ();
   }
 
+  private void LateUpdate () {
+    var avgAmplitude = fftData.Where (value => !float.IsNaN (value)).Average () / fftCeiling;
+    if (!float.IsNaN (avgAmplitude) && !float.IsInfinity (avgAmplitude))
+      Camera.main.transform.localPosition = originalPos + UnityEngine.Random.insideUnitSphere * avgAmplitude;
+  }
+
   private void OnDestroy () {
     for (int i = 11; i < 90; i++) {
       SendMessage (i, 0);
@@ -90,16 +101,20 @@ public class MidiController : MonoBehaviour {
 
   private void DrawFFT () {
     if (playback.GetFFTData (fftData)) {
+      visualizer.SetFFTData (fftData);
       for (int i = 0; i < sampleCount; i++) {
         var amplitude = fftData[i];
-        if (amplitude > 1) {
-          for (int cell = 1; cell <= cellCount; cell++) {
-            if (amplitude / (cell * (fftCeiling / cellCount)) >= 1)
-              SendMessage (cellOffset + 10 * cell + 1 + i, 72 + i, 1, true);
-          }
-        } else {
-          for (int cell = 1; cell <= cellCount; cell++) {
-            SendMessage (cellOffset + 10 * cell + 1 + i, 0, 1, true);
+        if (i % launchpadColumnCount == 0) {
+          var launchpadIndex = i / launchpadColumnCount;
+          if (amplitude > 1) {
+            for (int cell = 1; cell <= cellCount; cell++) {
+              if (amplitude / (cell * (fftCeiling / cellCount)) >= 1)
+                SendMessage (cellOffset + 10 * cell + 1 + launchpadIndex, 72 + launchpadIndex, 1, true);
+            }
+          } else {
+            for (int cell = 1; cell <= cellCount; cell++) {
+              SendMessage (cellOffset + 10 * cell + 1 + launchpadIndex, 0, 1, true);
+            }
           }
         }
       }
