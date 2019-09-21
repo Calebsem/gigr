@@ -16,13 +16,17 @@ public class MidiController : MonoBehaviour {
   public const int B = 37;
   public const int C = 46;
   public const int D = 47;
+  public const int START_TRACK = 81;
   public const int launchpadColumnCount = 8;
   public const int cellCount = 4;
   public const int cellOffset = 40;
   public const float fftCeiling = float.MaxValue / 4f;
 
+  public Orchestrator orchestrator;
+
   MidiIn controllerIn;
   MidiOut controllerOut;
+  List<Track> tracks;
 
   void Start () {
     for (int device = 0; device < MidiIn.NumberOfDevices; device++) {
@@ -41,7 +45,6 @@ public class MidiController : MonoBehaviour {
         break;
       }
     }
-    StartCoroutine (LaunchpadUpdate ());
   }
 
   private void OnDestroy () {
@@ -54,14 +57,7 @@ public class MidiController : MonoBehaviour {
     controllerOut.Dispose ();
   }
 
-  private IEnumerator LaunchpadUpdate () {
-    for (;;) {
-      DrawControls ();
-      yield return new WaitForSecondsRealtime (0.25f);
-    }
-  }
-
-  private void DrawControls () {
+  public void DrawControls () {
     SendMessage (UP, 56);
     SendMessage (DOWN, 56);
     SendMessage (LEFT, 56);
@@ -70,6 +66,11 @@ public class MidiController : MonoBehaviour {
     SendMessage (B, 16);
     SendMessage (C, 24);
     SendMessage (D, 32);
+
+    if (tracks != null)
+      foreach (var track in tracks) {
+        SendMessage (track.index + START_TRACK, track.color);
+      }
   }
 
   public void DrawFFT (float[] fftData) {
@@ -91,8 +92,24 @@ public class MidiController : MonoBehaviour {
     }
   }
 
+  public void SetTrack (Track track) {
+    if (tracks == null)
+      tracks = new List<Track> ();
+    tracks.Add (track);
+  }
+
   private bool IsControl (int note) {
-    return note == UP || note == DOWN || note == LEFT || note == RIGHT || note == A || note == B || note == C || note == D;
+    return note == UP || note == DOWN || note == LEFT || note == RIGHT || note == A || note == B || note == C || note == D ||
+      IsTrack (note);
+  }
+
+  private bool IsTrack (int note) {
+    return tracks.Any (t => t.index + START_TRACK == note);
+  }
+
+  private Track GetTrack (int note) {
+    if (!IsTrack (note)) return null;
+    return tracks.Find (t => t.index == note - START_TRACK);
   }
 
   private void SendMessage (int note, int velocity, int channel = 1, bool ignoreControls = false) {
@@ -109,6 +126,10 @@ public class MidiController : MonoBehaviour {
   private void controller_MessageReceived (object sender, MidiInMessageEventArgs e) {
     var noteOn = e.MidiEvent as NoteOnEvent;
     if (noteOn != null) {
+      var track = GetTrack (noteOn.NoteNumber);
+      if (track != null) {
+        orchestrator.ActivateTrack (track);
+      }
       switch (noteOn.NoteNumber) {
         case UP:
           break;

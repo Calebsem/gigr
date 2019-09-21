@@ -1,0 +1,11 @@
+{
+  "bundles": ["main"],
+  "tracks": [
+    {
+      "index": 0,
+      "color": 94,
+      "bundle": "main",
+      "prefab": "prefabName"
+    }
+  ]
+}

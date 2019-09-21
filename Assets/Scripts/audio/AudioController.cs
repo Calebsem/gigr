@@ -28,6 +28,7 @@ public class AudioController : MonoBehaviour {
   private IEnumerator FFTUpdate () {
     for (;;) {
       DrawFFT ();
+      midi.DrawControls ();
       yield return new WaitForSecondsRealtime (0.25f);
     }
   }
