@@ -55,6 +55,7 @@ public class MidiController : MonoBehaviour {
     playback = new RealTimePlayback (sampleCount);
     fftData = new float[sampleCount];
     playback.Start ();
+    StartCoroutine (LaunchpadUpdate ());
   }
 
   private void Update () {
@@ -78,17 +79,21 @@ public class MidiController : MonoBehaviour {
         translation.y = 0;
       }
     }
-    DrawFFT ();
-    DrawControls ();
   }
 
   private void LateUpdate () {
-    var avgAmplitude = fftData.Where (value => !float.IsNaN (value)).Average () / fftCeiling;
+    var avgAmplitude = 0f;
+    try {
+      avgAmplitude = fftData.Where (value => !float.IsNaN (value)).Average () / fftCeiling;
+    } catch (Exception e) {
+      Debug.LogException (e);
+    }
     if (!float.IsNaN (avgAmplitude) && !float.IsInfinity (avgAmplitude))
       Camera.main.transform.localPosition = originalPos + UnityEngine.Random.insideUnitSphere * avgAmplitude;
   }
 
   private void OnDestroy () {
+    StopAllCoroutines ();
     for (int i = 11; i < 90; i++) {
       SendMessage (i, 0);
     }
@@ -97,6 +102,14 @@ public class MidiController : MonoBehaviour {
     controllerOut.Dispose ();
     playback.Stop ();
     playback.Dispose ();
+  }
+
+  private IEnumerator LaunchpadUpdate () {
+    for (;;) {
+      DrawFFT ();
+      DrawControls ();
+      yield return new WaitForSecondsRealtime (0.25f);
+    }
   }
 
   private void DrawFFT () {

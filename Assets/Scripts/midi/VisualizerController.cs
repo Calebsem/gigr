@@ -27,6 +27,16 @@ public class VisualizerController : MonoBehaviour {
 
   private void Update () {
     transform.Rotate (0, RotationSpeed * Time.deltaTime, 0);
+    foreach (var child in Children) {
+      if (child.localScale.y > 1) {
+        var scale = child.localScale.y - Time.deltaTime;
+        child.localScale = new Vector3 (1, scale, 1);
+        child.localPosition = new Vector3 (child.localPosition.x, scale / 2f, child.localPosition.z);
+      } else {
+        child.localScale = Vector3.one;
+        child.localPosition = new Vector3 (child.localPosition.x, 0, child.localPosition.z);
+      }
+    }
   }
 
   public void SetFFTData (float[] fftData) {
